@@ -11,6 +11,10 @@ TAG_ALIASES = {
     "GENRE": "genres",
     "STORY_LINE": "plot",
     "IMG_POSTER": "poster",
+    "LANGUAGE": "language",
+    "DIRECTOR": "director",
+    "WRITER": "writer",
+    "CAST": "cast",
 }
 
 

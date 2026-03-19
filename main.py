@@ -24,7 +24,7 @@ async def inline_query_handler(update, context):
         return
 
     try:
-        movies = search_movie(query)[:1]  # Just 1 movie to prevent timeouts
+        movies = search_movie(query)[:2]  # Return 2 movies for better results
     except Exception as e:
         print("TMDb error:", e)
         return
@@ -32,24 +32,42 @@ async def inline_query_handler(update, context):
     results = []
 
     for movie in movies:
-        # Use search data directly instead of making additional API calls
-        data = {
-            "title": movie.get("title"),
-            "year": (movie.get("release_date") or "")[:4],
-            "rating": movie.get("vote_average"),
-            "votes": movie.get("vote_count"),
-            "runtime": None,
-            "genres": "",
-            "plot": movie.get("overview"),
-            "poster": (
-                f"https://image.tmdb.org/t/p/w500{movie['poster_path']}"
-                if movie.get("poster_path") else None
-            ),
-        }
+        try:
+            # Get detailed information for better formatting
+            details = get_movie_details(movie["id"])
+            data = normalize_movie(details)
+        except Exception as e:
+            print(f"Error fetching details for movie {movie['id']}: {e}")
+            # Fallback to search data if details fail
+            data = {
+                "title": movie.get("title"),
+                "year": (movie.get("release_date") or "")[:4],
+                "rating": movie.get("vote_average"),
+                "votes": movie.get("vote_count"),
+                "runtime": None,
+                "genres": "",
+                "plot": movie.get("overview"),
+                "poster": (
+                    f"https://image.tmdb.org/t/p/w500{movie['poster_path']}"
+                    if movie.get("poster_path") else None
+                ),
+                "language": "",
+                "director": "",
+                "writer": "",
+                "cast": "",
+            }
 
         template = context.bot_data.get(
             "default_template",
-            "<b>#TITLE</b> (#YEAR)\n⭐ #RATING"
+            """🏷️ <b>#TITLE</b> (#YEAR)
+🎭 Genres: #GENRE
+🌟 Rating: #RATING / 10 (based on #VOTES user ratings)
+☀️ Languages: #LANGUAGE
+👥 Directors: #DIRECTOR
+👥 Writers: #WRITER
+👥 Stars: #CAST
+📀 Duration: #DURATION min
+🔰 Story Line: #STORY_LINE"""
         )
 
         rendered = render_template(template, data)
