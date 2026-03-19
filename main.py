@@ -1,7 +1,8 @@
 import logging
 import os
 from dotenv import load_dotenv
-from app.tmdb import search_movie, get_movie_details
+from app.tmdb import search_movie, get_movie_details, normalize_movie
+from app.template_engine import render_template
 
 load_dotenv()
 
@@ -30,18 +31,29 @@ async def inline_query_handler(update, context):
     results = []
 
     for movie in movies:
-        title = movie.get("title", "Unknown")
-        year = (movie.get("release_date") or "")[:4]
-        overview = movie.get("overview", "")[:300]
+        try:
+            details = get_movie_details(movie["id"])
+            data = normalize_movie(details)
+        except Exception as e:
+            print(f"Error fetching details for movie {movie['id']}: {e}")
+            continue
+
+        template = context.bot_data.get(
+            "default_template",
+            "<b>#TITLE</b> (#YEAR)\n⭐ #RATING"
+        )
+
+        rendered = render_template(template, data)
 
         results.append(
             InlineQueryResultArticle(
                 id=str(uuid.uuid4()),
-                title=f"{title} ({year})",
-                description=overview,
+                title=f"{data['title'] or 'Unknown Title'} ({data['year'] or 'Unknown Year'})",
+                description=(data["plot"] or "No description available")[:300],
                 input_message_content=InputTextMessageContent(
-                    message_text="Fetching details...",
-                    parse_mode="HTML"
+                    message_text=rendered,
+                    parse_mode="HTML",
+                    disable_web_page_preview=False
                 )
             )
         )
