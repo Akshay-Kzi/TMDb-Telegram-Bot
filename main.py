@@ -8,6 +8,7 @@ load_dotenv()
 
 from telegram import InlineQueryResultArticle, InputTextMessageContent
 from telegram.ext import ApplicationBuilder, InlineQueryHandler, ContextTypes
+from telegram.error import BadRequest
 import uuid
 
 logging.basicConfig(level=logging.INFO)
@@ -23,7 +24,7 @@ async def inline_query_handler(update, context):
         return
 
     try:
-        movies = search_movie(query)[:5]
+        movies = search_movie(query)[:3]  # Reduced from 5 to 3 for faster response
     except Exception as e:
         print("TMDb error:", e)
         return
@@ -58,7 +59,15 @@ async def inline_query_handler(update, context):
             )
         )
 
-    await update.inline_query.answer(results, cache_time=1)
+    try:
+        await update.inline_query.answer(results, cache_time=1)
+    except BadRequest as e:
+        if "too old" in str(e).lower() or "timeout" in str(e).lower():
+            logging.warning(f"Inline query timeout: {e}")
+        else:
+            logging.error(f"BadRequest error: {e}")
+    except Exception as e:
+        logging.error(f"Error answering inline query: {e}")
 
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()

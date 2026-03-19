@@ -14,7 +14,7 @@ def search_movie(query: str):
         "include_adult": False,
     }
 
-    r = requests.get(url, params=params, timeout=10)
+    r = requests.get(url, params=params, timeout=5)
     r.raise_for_status()
     return r.json().get("results", [])
 
@@ -26,7 +26,7 @@ def get_movie_details(tmdb_id: int):
         "append_to_response": "credits,videos",
     }
 
-    r = requests.get(url, params=params, timeout=10)
+    r = requests.get(url, params=params, timeout=5)
     r.raise_for_status()
     return r.json()
 
