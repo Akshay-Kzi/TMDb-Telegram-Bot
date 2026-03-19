@@ -23,7 +23,6 @@ def get_movie_details(tmdb_id: int):
     url = f"{BASE_URL}/movie/{tmdb_id}"
     params = {
         "api_key": cfg.TMDB_API_KEY,
-        "append_to_response": "credits,videos",
     }
 
     r = requests.get(url, params=params, timeout=5)

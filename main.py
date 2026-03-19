@@ -6,7 +6,7 @@ from app.template_engine import render_template
 
 load_dotenv()
 
-from telegram import InlineQueryResultArticle, InputTextMessageContent
+from telegram import InlineQueryResultPhoto, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, InlineQueryHandler, ContextTypes
 from telegram.error import BadRequest
 import uuid
@@ -24,7 +24,7 @@ async def inline_query_handler(update, context):
         return
 
     try:
-        movies = search_movie(query)[:3]  # Reduced from 5 to 3 for faster response
+        movies = search_movie(query)[:2]  # Reduced to 2 for faster response
     except Exception as e:
         print("TMDb error:", e)
         return
@@ -46,18 +46,18 @@ async def inline_query_handler(update, context):
 
         rendered = render_template(template, data)
 
+        poster_url = data.get("poster") or "https://via.placeholder.com/300x450?text=No+Image"
+
         results.append(
-            InlineQueryResultArticle(
+            InlineQueryResultPhoto(
                 id=str(uuid.uuid4()),
-                title=f"{data['title'] or 'Unknown Title'} ({data['year'] or 'Unknown Year'})",
-                description=(data["plot"] or "No description available")[:300],
-                input_message_content=InputTextMessageContent(
-                    message_text=rendered,
-                    parse_mode="HTML",
-                    disable_web_page_preview=False
-                )
+                photo_url=poster_url,
+                thumbnail_url=poster_url,
+                caption=rendered,
+                parse_mode="HTML"
             )
         )
+
 
     try:
         await update.inline_query.answer(results, cache_time=1)
