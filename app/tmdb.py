@@ -1,5 +1,6 @@
 import requests
 from app.config import load_config
+from app.database import cache_get, cache_set
 
 cfg = load_config()
 
@@ -7,6 +8,12 @@ BASE_URL = "https://api.themoviedb.org/3"
 
 
 def search_movie(query: str):
+    # Check cache first
+    cache_key = f"search:{query.lower()}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+    
     url = f"{BASE_URL}/search/movie"
     params = {
         "api_key": cfg.TMDB_API_KEY,
@@ -16,10 +23,21 @@ def search_movie(query: str):
 
     r = requests.get(url, params=params, timeout=3)
     r.raise_for_status()
-    return r.json().get("results", [])
+    results = r.json().get("results", [])
+    
+    # Cache for 1 hour
+    cache_set(cache_key, results, ttl=3600)
+    
+    return results
 
 
 def get_movie_details(tmdb_id: int):
+    # Check cache first
+    cache_key = f"movie:{tmdb_id}"
+    cached = cache_get(cache_key)
+    if cached:
+        return cached
+    
     url = f"{BASE_URL}/movie/{tmdb_id}"
     params = {
         "api_key": cfg.TMDB_API_KEY,
@@ -28,7 +46,12 @@ def get_movie_details(tmdb_id: int):
 
     r = requests.get(url, params=params, timeout=3)
     r.raise_for_status()
-    return r.json()
+    data = r.json()
+    
+    # Cache for 24 hours (movie details change less frequently)
+    cache_set(cache_key, data, ttl=86400)
+    
+    return data
 
 
 def normalize_movie(data: dict):
