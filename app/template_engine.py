@@ -8,6 +8,7 @@ TAG_ALIASES = {
     "RATING": "rating",
     "VOTES": "votes",
     "DURATION": "runtime",
+    "DURATION_FORMAT": "duration_format",
     "GENRE": "genres",
     "STORY_LINE": "plot",
     "IMG_POSTER": "poster",
@@ -15,6 +16,7 @@ TAG_ALIASES = {
     "DIRECTOR": "director",
     "WRITER": "writer",
     "CAST": "cast",
+    "COUNTRY": "country",
 }
 
 

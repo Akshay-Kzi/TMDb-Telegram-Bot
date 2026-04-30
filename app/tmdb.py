@@ -14,7 +14,7 @@ def search_movie(query: str):
         "include_adult": False,
     }
 
-    r = requests.get(url, params=params, timeout=5)
+    r = requests.get(url, params=params, timeout=3)
     r.raise_for_status()
     return r.json().get("results", [])
 
@@ -26,7 +26,7 @@ def get_movie_details(tmdb_id: int):
         "append_to_response": "credits",
     }
 
-    r = requests.get(url, params=params, timeout=5)
+    r = requests.get(url, params=params, timeout=3)
     r.raise_for_status()
     return r.json()
 
@@ -49,12 +49,25 @@ def normalize_movie(data: dict):
     # Get languages
     languages = [lang["english_name"] for lang in data.get("spoken_languages", [])]
     
+    # Get countries
+    countries = [country["name"] for country in data.get("production_countries", [])]
+    
+    # Format duration
+    runtime = data.get("runtime")
+    if runtime:
+        hours = runtime // 60
+        mins = runtime % 60
+        duration_format = f"{hours}h {mins}min" if hours > 0 else f"{mins}min"
+    else:
+        duration_format = "N/A"
+    
     return {
         "title": data.get("title"),
         "year": (data.get("release_date") or "")[:4],
         "rating": data.get("vote_average"),
         "votes": data.get("vote_count"),
         "runtime": data.get("runtime"),
+        "duration_format": duration_format,
         "genres": ", ".join(g["name"] for g in data.get("genres", [])),
         "plot": data.get("overview"),
         "poster": (
@@ -65,4 +78,5 @@ def normalize_movie(data: dict):
         "director": ", ".join(directors),
         "writer": ", ".join(writers),
         "cast": ", ".join(top_cast),
+        "country": ", ".join(countries),
     }

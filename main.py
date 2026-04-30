@@ -6,7 +6,7 @@ from app.template_engine import render_template
 
 load_dotenv()
 
-from telegram import InlineQueryResultPhoto, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineQueryResultArticle, InputTextMessageContent, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, InlineQueryHandler, ContextTypes
 from telegram.error import BadRequest
 import uuid
@@ -24,7 +24,7 @@ async def inline_query_handler(update, context):
         return
 
     try:
-        movies = search_movie(query)[:2]  # Return 2 movies for better results
+        movies = search_movie(query)[:1]  # Just 1 movie to prevent timeouts
     except Exception as e:
         print("TMDb error:", e)
         return
@@ -45,6 +45,7 @@ async def inline_query_handler(update, context):
                 "rating": movie.get("vote_average"),
                 "votes": movie.get("vote_count"),
                 "runtime": None,
+                "duration_format": "N/A",
                 "genres": "",
                 "plot": movie.get("overview"),
                 "poster": (
@@ -55,19 +56,27 @@ async def inline_query_handler(update, context):
                 "director": "",
                 "writer": "",
                 "cast": "",
+                "country": "",
             }
 
         template = context.bot_data.get(
             "default_template",
-            """🏷️ <b>#TITLE</b> (#YEAR)
+            """� <b>#TITLE</b>
 🎭 Genres: #GENRE
-🌟 Rating: #RATING / 10 (based on #VOTES user ratings)
-☀️ Languages: #LANGUAGE
-👥 Directors: #DIRECTOR
-👥 Writers: #WRITER
-👥 Stars: #CAST
-📀 Duration: #DURATION min
-🔰 Story Line: #STORY_LINE"""
+📅 Year: #YEAR
+
+⭐ Rating: #RATING / 10 (based on #VOTES votes)
+🌐 Languages: #LANGUAGE
+
+🎬 Directors: #DIRECTOR
+✍ Writers: #WRITER
+🎭 Cast: #CAST
+
+⏱ Duration: #DURATION_FORMAT
+🌍 Country: #COUNTRY
+
+� Story Line:
+#STORY_LINE"""
         )
 
         rendered = render_template(template, data)
@@ -75,12 +84,15 @@ async def inline_query_handler(update, context):
         poster_url = data.get("poster") or "https://via.placeholder.com/300x450?text=No+Image"
 
         results.append(
-            InlineQueryResultPhoto(
+            InlineQueryResultArticle(
                 id=str(uuid.uuid4()),
-                photo_url=poster_url,
-                thumbnail_url=poster_url,
-                caption=rendered,
-                parse_mode="HTML"
+                title=f"{data['title'] or 'Unknown Title'} ({data['year'] or 'Unknown Year'})",
+                description=(data["plot"] or "No description available")[:300],
+                input_message_content=InputTextMessageContent(
+                    message_text=rendered,
+                    parse_mode="HTML",
+                    disable_web_page_preview=False
+                )
             )
         )
 
