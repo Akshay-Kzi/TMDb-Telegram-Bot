@@ -6,8 +6,8 @@ from app.template_engine import render_template
 
 load_dotenv()
 
-from telegram import InlineQueryResultPhoto, InputTextMessageContent, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, InlineQueryHandler, ContextTypes
+from telegram import InlineQueryResultPhoto, InputTextMessageContent, InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ApplicationBuilder, InlineQueryHandler, ContextTypes, CommandHandler
 from telegram.error import BadRequest
 import uuid
 
@@ -16,6 +16,33 @@ logging.basicConfig(level=logging.INFO)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN not set")
+
+async def start_command(update, context):
+    """Handle /start command with welcome message and inline button"""
+    welcome_message = """
+🎬 **Welcome to MovieBot!**
+
+I'm your personal movie assistant powered by TMDb. 
+
+🔍 **How to use:**
+- Type `@YourBotName movie_name` in any chat
+- Or click the button below to search inline
+
+📊 **Features:**
+- Detailed movie information
+- Poster images
+- Cast, crew, and ratings
+- Fast response with caching
+
+Made with ❤️ using Python and TMDb API
+    """
+    
+    keyboard = [
+        [InlineKeyboardButton("🔍 Search Movies", switch_inline_query="")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(welcome_message, parse_mode="Markdown", reply_markup=reply_markup)
 
 async def inline_query_handler(update, context):
     query = update.inline_query.query.strip()
@@ -105,6 +132,7 @@ Stars  #CAST
 
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start_command))
     app.add_handler(InlineQueryHandler(inline_query_handler))
     app.run_polling()
 
