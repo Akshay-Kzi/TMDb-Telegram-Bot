@@ -23,7 +23,10 @@ def init_db():
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY,
         username TEXT,
-        is_admin INTEGER DEFAULT 0
+        is_admin INTEGER DEFAULT 0,
+        is_superuser INTEGER DEFAULT 0,
+        query_count INTEGER DEFAULT 0,
+        last_used INTEGER
     )
     """)
 
@@ -112,3 +115,87 @@ def cache_clear_expired():
     
     conn.commit()
     conn.close()
+
+
+def get_or_create_user(user_id: int, username: str = None):
+    """Get existing user or create new one"""
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    user = cur.fetchone()
+    
+    if not user:
+        cur.execute(
+            "INSERT INTO users (id, username, query_count, last_used) VALUES (?, ?, 0, ?)",
+            (user_id, username, int(time.time()))
+        )
+        conn.commit()
+        user = {"id": user_id, "username": username, "is_superuser": 0, "query_count": 0}
+    else:
+        user = dict(user)
+    
+    conn.close()
+    return user
+
+
+def update_user_usage(user_id: int):
+    """Increment query count and update last used timestamp"""
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    cur.execute(
+        "UPDATE users SET query_count = query_count + 1, last_used = ? WHERE id = ?",
+        (int(time.time()), user_id)
+    )
+    
+    conn.commit()
+    conn.close()
+
+
+def grant_superuser(user_id: int):
+    """Grant superuser privileges to a user"""
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    cur.execute("UPDATE users SET is_superuser = 1 WHERE id = ?", (user_id,))
+    
+    conn.commit()
+    conn.close()
+
+
+def revoke_superuser(user_id: int):
+    """Revoke superuser privileges from a user"""
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    cur.execute("UPDATE users SET is_superuser = 0 WHERE id = ?", (user_id,))
+    
+    conn.commit()
+    conn.close()
+
+
+def is_superuser(user_id: int) -> bool:
+    """Check if user is a superuser"""
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    cur.execute("SELECT is_superuser FROM users WHERE id = ?", (user_id,))
+    row = cur.fetchone()
+    conn.close()
+    
+    if row:
+        return bool(row[0])
+    return False
+
+
+def get_all_users():
+    """Get all users with their stats"""
+    conn = get_connection()
+    cur = conn.cursor()
+    
+    cur.execute("SELECT id, username, is_superuser, query_count, last_used FROM users ORDER BY query_count DESC")
+    users = [dict(row) for row in cur.fetchall()]
+    
+    conn.close()
+    return users

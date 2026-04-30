@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from app.tmdb import search_movie, get_movie_details, normalize_movie
 from app.template_engine import render_template
+from app.database import get_or_create_user, update_user_usage, is_superuser, grant_superuser, revoke_superuser, get_all_users
 
 load_dotenv()
 
@@ -25,7 +26,7 @@ async def start_command(update, context):
 I'm your personal movie assistant powered by TMDb. 
 
 🔍 **How to use:**
-- Type `@YourBotName movie_name` in any chat
+- Type the username of bot followed by movie title (For example: `@TMDbInfoKziBot inception`) in any chat
 - Or click the button below to search inline
 
 📊 **Features:**
@@ -44,11 +45,82 @@ Made with ❤️ using Python and TMDb API
     
     await update.message.reply_text(welcome_message, parse_mode="Markdown", reply_markup=reply_markup)
 
+
+async def grant_command(update, context):
+    """Grant superuser access to a user (superuser only)"""
+    user_id = update.effective_user.id
+    
+    if not is_superuser(user_id):
+        await update.message.reply_text("❌ You don't have permission to use this command.")
+        return
+    
+    if not context.args or len(context.args) < 1:
+        await update.message.reply_text("Usage: /grant <user_id>")
+        return
+    
+    try:
+        target_id = int(context.args[0])
+        grant_superuser(target_id)
+        await update.message.reply_text(f"✅ Superuser access granted to {target_id}")
+    except ValueError:
+        await update.message.reply_text("❌ Invalid user ID. Please provide a numeric user ID.")
+
+
+async def revoke_command(update, context):
+    """Revoke superuser access from a user (superuser only)"""
+    user_id = update.effective_user.id
+    
+    if not is_superuser(user_id):
+        await update.message.reply_text("❌ You don't have permission to use this command.")
+        return
+    
+    if not context.args or len(context.args) < 1:
+        await update.message.reply_text("Usage: /revoke <user_id>")
+        return
+    
+    try:
+        target_id = int(context.args[0])
+        revoke_superuser(target_id)
+        await update.message.reply_text(f"✅ Superuser access revoked from {target_id}")
+    except ValueError:
+        await update.message.reply_text("❌ Invalid user ID. Please provide a numeric user ID.")
+
+
+async def stats_command(update, context):
+    """Show usage statistics (superuser only)"""
+    user_id = update.effective_user.id
+    
+    if not is_superuser(user_id):
+        await update.message.reply_text("❌ You don't have permission to use this command.")
+        return
+    
+    users = get_all_users()
+    
+    if not users:
+        await update.message.reply_text("No users found.")
+        return
+    
+    stats_text = "📊 **User Statistics**\n\n"
+    for user in users[:20]:  # Show top 20 users
+        superuser_badge = "⭐ " if user['is_superuser'] else ""
+        username = user['username'] or "Unknown"
+        stats_text += f"{superuser_badge}{username} (ID: {user['id']})\n"
+        stats_text += f"   Queries: {user['query_count']}\n\n"
+    
+    await update.message.reply_text(stats_text, parse_mode="Markdown")
+
+
 async def inline_query_handler(update, context):
     query = update.inline_query.query.strip()
 
     if not query:
         return
+
+    # Track user usage
+    user_id = update.inline_query.from_user.id
+    username = update.inline_query.from_user.username
+    get_or_create_user(user_id, username)
+    update_user_usage(user_id)
 
     try:
         movies = search_movie(query)[:1]  # Just 1 movie to prevent timeouts
@@ -133,6 +205,9 @@ Stars  #CAST
 def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("grant", grant_command))
+    app.add_handler(CommandHandler("revoke", revoke_command))
+    app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(InlineQueryHandler(inline_query_handler))
     app.run_polling()
 
