@@ -100,10 +100,12 @@ async def stats_command(update, context):
         await update.message.reply_text("No users found.")
         return
     
-    stats_text = "📊 **User Statistics**\n\n"
+    stats_text = "📊 User Statistics\n\n"
     for user in users[:20]:  # Show top 20 users
         superuser_badge = "⭐ " if user['is_superuser'] else ""
         username = user['username'] or "Unknown"
+        # Escape special characters for Markdown
+        username = username.replace('_', '\\_').replace('*', '\\*').replace('[', '\\[').replace(']', '\\]')
         stats_text += f"{superuser_badge}{username} (ID: {user['id']})\n"
         stats_text += f"   Queries: {user['query_count']}\n\n"
     
