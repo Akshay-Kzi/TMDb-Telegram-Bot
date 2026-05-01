@@ -1,5 +1,7 @@
 # 🎬 TMDb Telegram Bot
 
+![Movie Bot Screenshot](screenshots/Screenshot%202026-05-01%20181007.png)
+
 A feature-rich Telegram inline bot for searching movies using the TMDb API. Get detailed movie information, poster images, cast/crew details, and more - all with fast response times thanks to intelligent caching.
 
 ## ✨ Features
