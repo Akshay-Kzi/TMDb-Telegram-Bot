@@ -1,5 +1,6 @@
 import logging
 import os
+import asyncio
 from dotenv import load_dotenv
 from app.tmdb import search_movie, get_movie_details, normalize_movie
 from app.template_engine import render_template
@@ -50,7 +51,7 @@ async def grant_command(update, context):
     """Grant superuser access to a user (superuser only)"""
     user_id = update.effective_user.id
     
-    if not is_superuser(user_id):
+    if not await is_superuser(user_id):
         await update.message.reply_text("❌ You don't have permission to use this command.")
         return
     
@@ -60,7 +61,7 @@ async def grant_command(update, context):
     
     try:
         target_id = int(context.args[0])
-        grant_superuser(target_id)
+        await grant_superuser(target_id)
         await update.message.reply_text(f"✅ Superuser access granted to {target_id}")
     except ValueError:
         await update.message.reply_text("❌ Invalid user ID. Please provide a numeric user ID.")
@@ -70,7 +71,7 @@ async def revoke_command(update, context):
     """Revoke superuser access from a user (superuser only)"""
     user_id = update.effective_user.id
     
-    if not is_superuser(user_id):
+    if not await is_superuser(user_id):
         await update.message.reply_text("❌ You don't have permission to use this command.")
         return
     
@@ -80,7 +81,7 @@ async def revoke_command(update, context):
     
     try:
         target_id = int(context.args[0])
-        revoke_superuser(target_id)
+        await revoke_superuser(target_id)
         await update.message.reply_text(f"✅ Superuser access revoked from {target_id}")
     except ValueError:
         await update.message.reply_text("❌ Invalid user ID. Please provide a numeric user ID.")
@@ -90,11 +91,11 @@ async def stats_command(update, context):
     """Show usage statistics (superuser only)"""
     user_id = update.effective_user.id
     
-    if not is_superuser(user_id):
+    if not await is_superuser(user_id):
         await update.message.reply_text("❌ You don't have permission to use this command.")
         return
     
-    users = get_all_users()
+    users = await get_all_users()
     
     if not users:
         await update.message.reply_text("No users found.")
@@ -121,13 +122,13 @@ async def inline_query_handler(update, context):
     # Track user usage
     user_id = update.inline_query.from_user.id
     username = update.inline_query.from_user.username
-    get_or_create_user(user_id, username)
-    update_user_usage(user_id)
+    await get_or_create_user(user_id, username)
+    await update_user_usage(user_id)
 
     try:
-        movies = search_movie(query)[:1]  # Just 1 movie to prevent timeouts
+        movies = (await search_movie(query))[:5]  # Retrieve up to 5 movies
     except Exception as e:
-        print("TMDb error:", e)
+        logging.error(f"TMDb error: {e}")
         return
 
     results = []
@@ -135,10 +136,10 @@ async def inline_query_handler(update, context):
     for movie in movies:
         try:
             # Get detailed information for better formatting
-            details = get_movie_details(movie["id"])
+            details = await get_movie_details(movie["id"])
             data = normalize_movie(details)
         except Exception as e:
-            print(f"Error fetching details for movie {movie['id']}: {e}")
+            logging.error(f"Error fetching details for movie {movie['id']}: {e}")
             # Fallback to search data if details fail
             data = {
                 "title": movie.get("title"),
@@ -193,7 +194,6 @@ Stars  #CAST
             )
         )
 
-
     try:
         await update.inline_query.answer(results, cache_time=1)
     except BadRequest as e:
@@ -205,6 +205,17 @@ Stars  #CAST
         logging.error(f"Error answering inline query: {e}")
 
 def main():
+    from app.database import init_db, get_or_create_user, grant_superuser
+    from app.config import load_config
+    
+    # Initialize the database schema on startup
+    asyncio.run(init_db())
+    
+    # Auto-grant owner superuser rights
+    cfg = load_config()
+    asyncio.run(get_or_create_user(cfg.OWNER_ID, "owner"))
+    asyncio.run(grant_superuser(cfg.OWNER_ID))
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("grant", grant_command))
@@ -215,3 +226,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
