@@ -18,6 +18,8 @@ class Config:
     OWNER_ID: int
     DATABASE_PATH: str
     PUBLIC_MODE: bool
+    WEBHOOK_URL: str = None
+    PORT: int = 8080
 
 def load_config() -> Config:
     missing = []
@@ -41,5 +43,9 @@ def load_config() -> Config:
     cfg.OWNER_ID = int(values["OWNER_ID"])
     cfg.DATABASE_PATH = values["DATABASE_PATH"]
     cfg.PUBLIC_MODE = values["PUBLIC_MODE"] == "1"
+    
+    cfg.WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+    cfg.PORT = int(os.getenv("PORT", "8080"))
 
     return cfg
+
