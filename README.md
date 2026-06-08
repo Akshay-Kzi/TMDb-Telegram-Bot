@@ -58,12 +58,7 @@ A feature-rich Telegram inline bot for searching movies using the TMDb API. Get 
 
 5. **Set up the main superuser**
    
-   The bot will automatically create the main superuser when you first run it. To set a specific superuser ID, run:
-   ```bash
-   python -c "from app.database import get_or_create_user, grant_superuser; get_or_create_user(1609185280, 'main_superuser'); grant_superuser(1609185280); print('Superuser set')"
-   ```
-   
-   Replace `1609185280` with your Telegram user ID.
+   The bot will automatically initialize the database schema and grant superuser permissions to the `OWNER_ID` defined in your `.env` file on startup. No manual setup commands are required!
 
 6. **Run the bot**
    ```bash
@@ -72,15 +67,17 @@ A feature-rich Telegram inline bot for searching movies using the TMDb API. Get 
 
 ## ⚙️ Configuration
 
-### Required Environment Variables
+### Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `BOT_TOKEN` | Your Telegram bot token from @BotFather | `123456789:ABCdefGHIjklMNOpqrsTUVwxyz` |
-| `TMDB_API_KEY` | Your TMDb API key | `abcdef1234567890abcdef1234567890` |
-| `OWNER_ID` | Your Telegram user ID (for owner access) | `1609185280` |
-| `DATABASE_PATH` | Path to SQLite database file | `bot.db` |
-| `PUBLIC_MODE` | Allow public access to the bot | `True` |
+| Variable | Description | Required | Example / Default |
+|----------|-------------|----------|-------------------|
+| `BOT_TOKEN` | Your Telegram bot token from @BotFather | **Yes** | `123456789:ABCdefGHIjklMNOpqrsTUVwxyz` |
+| `TMDB_API_KEY` | Your TMDb API key | **Yes** | `abcdef1234567890abcdef1234567890` |
+| `OWNER_ID` | Your Telegram user ID (automatically granted superuser) | **Yes** | `1609185280` |
+| `DATABASE_PATH` | Path to SQLite database file | **Yes** | `bot.db` |
+| `PUBLIC_MODE` | Allow public access to the bot | **Yes** | `True` |
+| `WEBHOOK_URL` | Public webhook URL for webhook mode (forces serverless mode) | No | `https://your-app.fly.dev` |
+| `PORT` | Local port for webhook HTTP server | No | `8080` |
 
 ### Getting Your Telegram User ID
 
