@@ -209,6 +209,13 @@ Stars  #CAST
     except Exception as e:
         logging.error(f"Error answering inline query: {e}")
 
+async def post_stop(application):
+    from app.database import close_db
+    from app.tmdb import close_client
+    logging.info("Closing database and HTTP client resources...")
+    await close_db()
+    await close_client()
+
 def main():
     from app.database import init_db, get_or_create_user, grant_superuser
     from app.config import load_config
@@ -221,7 +228,7 @@ def main():
     asyncio.run(get_or_create_user(cfg.OWNER_ID, "owner"))
     asyncio.run(grant_superuser(cfg.OWNER_ID))
 
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).post_stop(post_stop).build()
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("grant", grant_command))
     app.add_handler(CommandHandler("revoke", revoke_command))
