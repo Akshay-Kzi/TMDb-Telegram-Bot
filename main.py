@@ -133,15 +133,15 @@ async def inline_query_handler(update, context):
 
     results = []
 
-    for movie in movies:
+    async def fetch_movie_data(movie):
         try:
             # Get detailed information for better formatting
             details = await get_movie_details(movie["id"])
-            data = normalize_movie(details)
+            return normalize_movie(details)
         except Exception as e:
             logging.error(f"Error fetching details for movie {movie['id']}: {e}")
             # Fallback to search data if details fail
-            data = {
+            return {
                 "title": movie.get("title"),
                 "year": (movie.get("release_date") or "")[:4],
                 "rating": movie.get("vote_average"),
@@ -161,6 +161,11 @@ async def inline_query_handler(update, context):
                 "country": "",
             }
 
+    # Fetch all details concurrently
+    tasks = [fetch_movie_data(movie) for movie in movies]
+    normalized_movies = await asyncio.gather(*tasks)
+
+    for data in normalized_movies:
         template = context.bot_data.get(
             "default_template",
             """🏷 Title: #TITLE
