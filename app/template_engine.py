@@ -1,4 +1,5 @@
 import re
+import html
 
 TAG_PATTERN = re.compile(r"#([A-Z_]+)")
 
@@ -32,6 +33,7 @@ def render_template(template: str, data: dict) -> str:
         if value is None:
             return ""
 
-        return str(value)
+        return html.escape(str(value))
 
     return TAG_PATTERN.sub(replace, template)
+
