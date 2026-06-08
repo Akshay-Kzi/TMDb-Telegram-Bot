@@ -1,4 +1,4 @@
-import requests
+import httpx
 from app.config import load_config
 from app.database import cache_get, cache_set
 
@@ -7,10 +7,10 @@ cfg = load_config()
 BASE_URL = "https://api.themoviedb.org/3"
 
 
-def search_movie(query: str):
+async def search_movie(query: str):
     # Check cache first
     cache_key = f"search:{query.lower()}"
-    cached = cache_get(cache_key)
+    cached = await cache_get(cache_key)
     if cached:
         return cached
     
@@ -21,20 +21,21 @@ def search_movie(query: str):
         "include_adult": False,
     }
 
-    r = requests.get(url, params=params, timeout=3)
-    r.raise_for_status()
-    results = r.json().get("results", [])
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, params=params, timeout=3.0)
+        r.raise_for_status()
+        results = r.json().get("results", [])
     
     # Cache for 1 hour
-    cache_set(cache_key, results, ttl=3600)
+    await cache_set(cache_key, results, ttl=3600)
     
     return results
 
 
-def get_movie_details(tmdb_id: int):
+async def get_movie_details(tmdb_id: int):
     # Check cache first
     cache_key = f"movie:{tmdb_id}"
-    cached = cache_get(cache_key)
+    cached = await cache_get(cache_key)
     if cached:
         return cached
     
@@ -44,14 +45,16 @@ def get_movie_details(tmdb_id: int):
         "append_to_response": "credits",
     }
 
-    r = requests.get(url, params=params, timeout=3)
-    r.raise_for_status()
-    data = r.json()
+    async with httpx.AsyncClient() as client:
+        r = await client.get(url, params=params, timeout=3.0)
+        r.raise_for_status()
+        data = r.json()
     
     # Cache for 24 hours (movie details change less frequently)
-    cache_set(cache_key, data, ttl=86400)
+    await cache_set(cache_key, data, ttl=86400)
     
     return data
+
 
 
 def normalize_movie(data: dict):
