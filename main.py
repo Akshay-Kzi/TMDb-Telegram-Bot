@@ -227,8 +227,20 @@ def main():
     app.add_handler(CommandHandler("revoke", revoke_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(InlineQueryHandler(inline_query_handler))
-    app.run_polling()
+    
+    if cfg.WEBHOOK_URL:
+        logging.info(f"Starting bot in Webhook Mode on port {cfg.PORT}...")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=cfg.PORT,
+            url_path=cfg.BOT_TOKEN,
+            webhook_url=f"{cfg.WEBHOOK_URL.rstrip('/')}/{cfg.BOT_TOKEN}"
+        )
+    else:
+        logging.info("Starting bot in Polling Mode...")
+        app.run_polling()
 
 if __name__ == "__main__":
     main()
+
 
